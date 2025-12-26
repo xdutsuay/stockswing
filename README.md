@@ -60,6 +60,14 @@ StockSwing is a sophisticated stock analysis and prediction platform that levera
    npm run dev  # Starts UI at http://localhost:3000
    ```
 
+4. **Running Tests**
+   ```bash
+   cd backend
+   source venv/bin/activate
+   pip install pytest httpx
+   pytest
+   ```
+
 ## 🗺️ Roadmap
 
 - [x] **Phase 1: Enhanced Visualization** (Completed)

@@ -10,6 +10,18 @@ class StockDataPoint(BaseModel):
     close: float
     volume: int
 
+class NewsArticle(BaseModel):
+    ticker: str
+    title: str
+    url: str
+    published_date: datetime
+    source: str
+    summary: Optional[str] = None
+    sentiment_score: float = 0.0
+    sentiment_label: str = "Neutral"
+    impact_score: int = 0
+    evidence: Optional[str] = None
+
 class PredictionRequest(BaseModel):
     ticker: str
     days: int = 7

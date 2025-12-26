@@ -38,22 +38,38 @@ class StockPredictor:
         
         return dataset
 
-    def predict(self, data: pd.DataFrame, days: int = 7) -> list[float]:
+    def predict(self, data: pd.DataFrame, days: int = 7, sentiment_score: float = 0.0) -> list[float]:
         dataset = self.prepare_data(data)
         
         if len(dataset) < self.timestep:
             raise ValueError(f"Not enough data points. Need at least {self.timestep}")
 
-        # If model failed to load, return a simulated trend for demo purposes
+        ticker = data.iloc[0]['ticker'] if 'ticker' in data.columns else "default"
+
+        # If model failed to load, return a stabilized simulated trend
         if self.model is None:
-            logger.warning("Model not loaded. Returning simulated trend.")
-            last_price = float(dataset[-1][0])  # Extract scalar from array
-            # Simple random walk for simulation
+            logger.warning(f"Model not loaded for {ticker}. Returning stabilized simulated trend.")
+            # Seed with ticker to keep prediction stable for a given stock
+            import hashlib
+            seed = int(hashlib.sha256(ticker.encode()).hexdigest(), 16) % (2**32)
+            rng = np.random.default_rng(seed)
+            
+            last_price = float(dataset[-1][0])
             simulated = []
             current = last_price
+            
+            # Apply sentiment bias to the simulation
+            # 0.005 daily bias per 1.0 sentiment score
+            daily_sentiment_bias = (sentiment_score * 0.01) 
+            
             for _ in range(days):
-                # Slightly bullish bias for demo
-                change = current * np.random.uniform(-0.01, 0.015)
+                # Using seeded RNG for stability
+                # Base random change +/- 1.5%
+                base_change = rng.uniform(-0.015, 0.015)
+                # Add sentiment bias
+                total_change_pct = base_change + daily_sentiment_bias
+                
+                change = current * total_change_pct
                 current += change
                 simulated.append(float(current))
             return simulated
@@ -76,7 +92,22 @@ class StockPredictor:
         predictions = np.array(predictions).reshape(-1, 1)
         original_predictions = self.scaler.inverse_transform(predictions)
         
-        return original_predictions.flatten().tolist()
+        # Apply sentiment adjustment to ML predictions
+        # We'll ramp up the adjustment linearly over the 7 days
+        # E.g., Day 1 has 1/7th impact, Day 7 has full impact
+        adjusted_predictions = []
+        base_preds = original_predictions.flatten().tolist()
+        
+        if sentiment_score != 0.0:
+            start_price = base_preds[0]
+            for i, p in enumerate(base_preds):
+                # Max impact of 5% at the end of the period for full sentiment
+                impact_factor = (i + 1) / days * 0.05 * sentiment_score
+                adjusted_price = p * (1 + impact_factor)
+                adjusted_predictions.append(adjusted_price)
+            return adjusted_predictions
+        
+        return base_preds
 
 
     def analyze_trend(self, recent_data: pd.DataFrame, predictions: list[float]) -> tuple[str, float]:

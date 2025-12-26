@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlmodel import Session
 from app.core.database import get_session
 from app.services.data_manager import DataManager
-from app.models.schemas import StockDataPoint, PredictionResponse, PredictionRequest, HealthCheck, SearchResult
+from app.models.schemas import StockDataPoint, PredictionResponse, PredictionRequest, HealthCheck, SearchResult, NewsArticle
 from app.services.predictor import StockPredictor
 from starlette.requests import Request
 from typing import List
@@ -51,6 +51,19 @@ def get_stock_history(ticker: str, session: Session = Depends(get_session)):
         ))
     return result
 
+
+from app.services.news_fetcher import NewsFetcher
+
+@api_router.get("/news/{ticker}", response_model=List[NewsArticle])
+def get_stock_news(ticker: str):
+    """
+    Get news articles for a specific ticker.
+    Currently returns simulated news data with sentiment analysis.
+    """
+    fetcher = NewsFetcher()
+    news = fetcher.get_news(ticker)
+    return news
+
 @api_router.post("/predict", response_model=PredictionResponse)
 def predict_stock(request: PredictionRequest, req: Request, session: Session = Depends(get_session)):
     ticker = request.ticker
@@ -75,11 +88,33 @@ def predict_stock(request: PredictionRequest, req: Request, session: Session = D
     
     predictor: StockPredictor = req.app.state.predictor
     try:
+        # Fetch news for sentiment analysis
+        fetcher = NewsFetcher()
+        news = fetcher.get_news(ticker)
+        
+        # Calculate aggregate sentiment score (-1 to 1)
+        sentiment_score = 0.0
+        if news:
+            total_weighted_sentiment = 0.0
+            total_impact = 0.0
+            
+            for article in news:
+                # Use impact_score as weight (0-100)
+                weight = article.impact_score / 100.0
+                total_weighted_sentiment += article.sentiment_score * weight
+                total_impact += weight
+            
+            if total_impact > 0:
+                sentiment_score = total_weighted_sentiment / total_impact
+                
+        processing_steps.append(f"Fetched {len(news)} news articles")
+        processing_steps.append(f"Calculated Sentiment Score: {sentiment_score:.2f}")
+
         processing_steps.append(f"Preparing data with {predictor.timestep}-day window")
         processing_steps.append("Normalizing prices using MinMaxScaler")
-        processing_steps.append(f"Generating {days}-day predictions using LSTM model")
+        processing_steps.append(f"Generating {days}-day predictions using LSTM model with sentiment adjustment")
         
-        predictions = predictor.predict(df, days=days)
+        predictions = predictor.predict(df, days=days, sentiment_score=sentiment_score)
         
         processing_steps.append("Inverse transforming predictions to original scale")
         
@@ -93,7 +128,7 @@ def predict_stock(request: PredictionRequest, req: Request, session: Session = D
     return PredictionResponse(
         ticker=ticker,
         predictions=predictions,
-        unit="USD",
+        unit="INR",
         last_updated=df.iloc[-1]['Date'],
         data_loaded_at=data_loaded_at,
         data_points_used=len(df),

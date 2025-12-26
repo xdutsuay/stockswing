@@ -26,7 +26,7 @@ echo "Ensuring dependencies..."
 pip install fastapi[all] tensorflow pandas numpy pydantic-settings sqlmodel yfinance scikit-learn
 
 # Run in background
-uvicorn app.main:app --reload --port 8000 &
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 &
 BACKEND_PID=$!
 cd ..
 

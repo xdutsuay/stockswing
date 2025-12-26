@@ -48,7 +48,9 @@ export function SearchDropdown({ value, onSelect, placeholder = "Search Ticker..
         }
 
         try {
-            const res = await fetch(`http://localhost:8000/api/v1/search?q=${encodeURIComponent(searchQuery)}&limit=10`);
+            const protocol = window.location.protocol;
+            const hostname = window.location.hostname;
+            const res = await fetch(`${protocol}//${hostname}:8000/api/v1/search?q=${encodeURIComponent(searchQuery)}&limit=10`);
             if (res.ok) {
                 const data = await res.json();
                 setResults(data);
@@ -127,8 +129,8 @@ export function SearchDropdown({ value, onSelect, placeholder = "Search Ticker..
                             key={result.symbol}
                             onClick={() => handleSelect(result.symbol)}
                             className={`px-4 py-3 cursor-pointer transition-colors border-b border-white/5 last:border-b-0 ${index === selectedIndex
-                                    ? 'bg-blue-500/20'
-                                    : 'hover:bg-white/5'
+                                ? 'bg-blue-500/20'
+                                : 'hover:bg-white/5'
                                 }`}
                         >
                             <div className="flex justify-between items-center">

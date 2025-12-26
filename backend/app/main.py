@@ -8,6 +8,8 @@ from app.core.database import create_db_and_tables
 from app.services.predictor import StockPredictor
 import os
 
+from app.services.scheduler import start_scheduler, stop_scheduler
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Initialize DB
@@ -22,8 +24,12 @@ async def lifespan(app: FastAPI):
     predictor = StockPredictor(model_path)
     app.state.predictor = predictor
 
+    # Start Scheduler
+    start_scheduler(app)
+
     yield
     print("Shutting down...")
+    stop_scheduler()
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
