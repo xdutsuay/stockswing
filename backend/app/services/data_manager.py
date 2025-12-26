@@ -11,7 +11,7 @@ class DataManager:
     def __init__(self, session: Session):
         self.session = session
 
-    def get_history(self, ticker: str, limit: int = 100) -> pd.DataFrame:
+    def get_history(self, ticker: str, limit: int = 730) -> pd.DataFrame:
         # Try local first
         statement = select(StockPrice).where(StockPrice.ticker == ticker).order_by(StockPrice.date.desc()).limit(limit)
         results = self.session.exec(statement).all()
@@ -34,7 +34,7 @@ class DataManager:
         ]
         return pd.DataFrame(data)
 
-    def sync_data(self, ticker: str, period: str = "2y"):
+    def sync_data(self, ticker: str, period: str = "5y"):
         logger.info(f"Syncing data for {ticker}...")
         tick = yf.Ticker(ticker)
         df = tick.history(period=period)

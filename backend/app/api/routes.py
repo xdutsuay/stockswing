@@ -34,7 +34,7 @@ def sync_ticker_data(ticker: str, background_tasks: BackgroundTasks, session: Se
 @api_router.get("/history/{ticker}", response_model=List[StockDataPoint])
 def get_stock_history(ticker: str, session: Session = Depends(get_session)):
     dm = DataManager(session)
-    df = dm.get_history(ticker, limit=365) # Get last year
+    df = dm.get_history(ticker, limit=730)  # Get last 2 years
     if df.empty:
         raise HTTPException(status_code=404, detail="No data found. Please sync first.")
     
@@ -60,13 +60,13 @@ def predict_stock(request: PredictionRequest, req: Request, session: Session = D
     processing_steps = []
     
     dm = DataManager(session)
-    df = dm.get_history(ticker, limit=100) # Need at least 60
+    df = dm.get_history(ticker, limit=730)  # Need at least 60, use 2 years for better accuracy
     
     if df.empty or len(df) < 60:
          # Auto-sync attempt
          processing_steps.append("Auto-syncing data from yfinance")
          dm.sync_data(ticker)
-         df = dm.get_history(ticker, limit=100)
+         df = dm.get_history(ticker, limit=730)
          if len(df) < 60:
             raise HTTPException(status_code=400, detail="Not enough data history to predict. Sync initiated, please try again.")
     
