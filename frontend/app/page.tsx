@@ -167,7 +167,15 @@ export default function Home() {
               </div>
             </div>
 
-            <StockChart data={history} />
+            <StockChart
+              data={history}
+              predictionData={prediction?.predictions ?
+                prediction.predictions.map((price: number, index: number) => ({
+                  date: new Date(Date.now() + (index + 1) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                  value: price
+                })) : undefined
+              }
+            />
 
             {/* Data Metadata Section */}
             {prediction && (
